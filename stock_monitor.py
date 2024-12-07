@@ -182,21 +182,27 @@ WantedBy=multi-user.target
     os.system('sudo systemctl enable stock_monitor.service')
     os.system('sudo systemctl start stock_monitor.service')
     
-    print("已经设置并启动了 Stock Monitor 的 Systemd 服务。")
+    print("\033[31m√√√已经设置并启动了 Stock Monitor 的 Systemd 服务\033[0m")
 
 def check_systemd_status():
-    """检查 Systemd 服务的状态。"""
+    """检查 Systemd 服务的状态"""
     os.system('sudo systemctl status stock_monitor.service')
 
+def check_systemd_restart():
+    """重启 Systemd 服务。"""
+    os.system('sudo systemctl restart stock_monitor.service')
+    print("\033[31m√√√已成功加载配置，并重启成功\033[0m")
+    
 def remove_systemd_service():
     """移除 Systemd 服务配置。"""
     os.system('sudo systemctl stop stock_monitor.service')
     os.system('sudo systemctl disable stock_monitor.service')
     os.system('sudo rm /etc/systemd/system/stock_monitor.service')
     os.system('sudo systemctl daemon-reload')
-    print("已移除 Stock Monitor 的 Systemd 服务配置。")
+    print("\033[31m√√√已移除 Stock Monitor 的 Systemd 服务配置\033[0m")
 
 def parse_arguments():
+    """解析命令行参数"""
     parser = argparse.ArgumentParser(description='Stock Monitor Service')
     parser.add_argument('--run', action='store_true', help='Run the stock monitor directly')
     return parser.parse_args()
@@ -205,18 +211,20 @@ def main():
     args = parse_arguments()
     
     if args.run:
+        # 当使用 --run 参数时，直接启动监控
         monitor = StockMonitor(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
         monitor.monitor(MONITOR_URLS)
     else:
         # 交互模式
         while True:
-            print("\n输入数字选择：")
+            print("\033[34m\n输入数字选择：\033[0m")
             print("1、临时运行 -测试效果")
             print("2、后台运行 -配置并启动 Systemd 服务")
             print("3、检查 Systemd 服务状态")
-            print("4、移除 Systemd 服务配置")
-            print("5、退出")
-
+            print("4、重启 Systemd 服务配置")
+            print("5、移除 Systemd 服务配置")
+            print("0、退出")
+            
             try:
                 choice = int(input("请选择操作（1-5）："))
                 if choice == 1:
@@ -230,12 +238,14 @@ def main():
                 elif choice == 3:
                     check_systemd_status()
                 elif choice == 4:
-                    remove_systemd_service()
+                    check_systemd_restart()
                 elif choice == 5:
-                    print("程序退出。")
+                    remove_systemd_service()
+                elif choice == 0:
+                    print("\033[31m√成功退出程序\033[0m")
                     break
                 else:
-                    print("无效的选择，请输入1-5之间的数字。")
+                    print("无效的选择，请输入1-6之间的数字。")
             except ValueError:
                 print("请输入有效的数字。")
 
