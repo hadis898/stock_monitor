@@ -1,3 +1,4 @@
+![image](https://img.imgdd.com/f210f3.a10591da-42cf-41e0-9f6c-2ecfc5468abf.png)
 # 介绍
 独角数卡 发卡库存价格监测 Python 脚本，主要用于对监测同行的发卡库存情况与价格变动，通过telegram bot进行通知提醒，便于及时掌握商品库和价格变动。
 
