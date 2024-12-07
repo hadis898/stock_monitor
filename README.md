@@ -1,1 +1,21 @@
-# stock_monitor
+# 介绍
+独角数卡 发卡库存价格监测 Python 脚本，主要用于对监测同行的发卡库存情况与价格变动，通过telegram bot进行通知提醒，便于及时掌握商品库和价格变动。
+
+# 支持类型
+万能监测，对所有网站都有效，不管你监测什么内容，只要更改关键词 匹配正则表达式就行。
+
+# 部署说明
+1. 安装依赖: pip install requests
+2. 在 MONITOR_URLS 中添加要监控的商品链接和名称
+3. 替换 TELEGRAM_BOT_TOKEN 和 TELEGRAM_CHAT_ID
+4. 临时启动，运行命令: python3 stock_monitor.py
+5. 建议使用 systemd 管理进程（ [systemd 使用教程](https://www.upx8.com/4537)）
+# 参数配置
+
+```
+CHECK_INTERVAL = 180  # 检查间隔（秒）
+STOCK_PATTERN = r'库存\((\d+)\)'  # 匹配库存的正则表达式
+PRICE_PATTERN = r'价格\s*(\d+\.\d+)'  # 匹配价格的正则表达式
+MAX_WORKERS = 5  # 并发线程数
+```
+# 更新日志
