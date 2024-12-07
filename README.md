@@ -6,7 +6,7 @@
 万能监测，对所有网站都有效，不管你监测什么内容，只要更改关键词 匹配正则表达式就行。
 
 # 部署说明
-1. 安装依赖: pip install requests
+1. 安装依赖: pip install requests [如果pip安装报错，解决方法](https://www.upx8.com/4545)
 2. 在 MONITOR_URLS 中添加要监控的商品链接和名称
 3. 替换 TELEGRAM_BOT_TOKEN 和 TELEGRAM_CHAT_ID
 4. 运行命令: sudo python3 stock_monitor.py
