@@ -182,7 +182,7 @@ WantedBy=multi-user.target
     os.system('sudo systemctl enable stock_monitor.service')
     os.system('sudo systemctl start stock_monitor.service')
     
-    print("\033[31m√√√已经设置并启动了 Stock Monitor 的 Systemd 服务\033[0m")
+    print("\033[32m√已经设置并启动了 Stock Monitor 的 Systemd 服务\033[0m")
 
 def check_systemd_status():
     """检查 Systemd 服务的状态"""
@@ -191,7 +191,7 @@ def check_systemd_status():
 def check_systemd_restart():
     """重启 Systemd 服务。"""
     os.system('sudo systemctl restart stock_monitor.service')
-    print("\033[31m√√√已成功加载配置，并重启成功\033[0m")
+    print("\033[32m√已成功加载配置，并重启成功\033[0m")
     
 def remove_systemd_service():
     """移除 Systemd 服务配置。"""
@@ -199,7 +199,7 @@ def remove_systemd_service():
     os.system('sudo systemctl disable stock_monitor.service')
     os.system('sudo rm /etc/systemd/system/stock_monitor.service')
     os.system('sudo systemctl daemon-reload')
-    print("\033[31m√√√已移除 Stock Monitor 的 Systemd 服务配置\033[0m")
+    print("\033[32m√已移除 Stock Monitor 的 Systemd 服务配置\033[0m")
 
 def parse_arguments():
     """解析命令行参数"""
