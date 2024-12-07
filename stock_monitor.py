@@ -1,26 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import requests
+import re
+import time
+import logging
+import traceback
+import argparse
+import os
+import sys
+import subprocess
+from typing import Optional, List, Dict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 # 检查并自动安装依赖
 def check_and_install_dependencies():
     try:
         import requests
     except ImportError:
         print("正在安装 requests 依赖...")
-        import sys
-        import subprocess
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'requests'])
         print("requests 依赖安装成功！")
 
 check_and_install_dependencies()
-
-import requests
-import re
-import time
-import logging
-import traceback
-from typing import Optional, List, Dict
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Telegram Bot 配置
 TELEGRAM_BOT_TOKEN = 'TELEGRAM_BOT_TOKEN'  # 替换为您的电报 Token
@@ -152,17 +154,90 @@ class StockMonitor:
                 self.send_telegram_message(error_info)
                 time.sleep(CHECK_INTERVAL)
 
+def setup_systemd():
+    """设置 Systemd 服务以实现自动启动。"""
+    service_file_content = f"""
+[Unit]
+Description=Stock Monitor Service
+After=network.target
+
+[Service]
+ExecStart={sys.executable} {os.path.abspath(__file__)} --run
+WorkingDirectory={os.path.dirname(os.path.abspath(__file__))}
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+RestartSec=30s
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+    service_path = '/etc/systemd/system/stock_monitor.service'
+    with open(service_path, 'w') as service_file:
+        service_file.write(service_file_content)
+    
+    os.system('sudo systemctl daemon-reload')
+    os.system('sudo systemctl enable stock_monitor.service')
+    os.system('sudo systemctl start stock_monitor.service')
+    
+    print("已经设置并启动了 Stock Monitor 的 Systemd 服务。")
+
+def check_systemd_status():
+    """检查 Systemd 服务的状态。"""
+    os.system('sudo systemctl status stock_monitor.service')
+
+def remove_systemd_service():
+    """移除 Systemd 服务配置。"""
+    os.system('sudo systemctl stop stock_monitor.service')
+    os.system('sudo systemctl disable stock_monitor.service')
+    os.system('sudo rm /etc/systemd/system/stock_monitor.service')
+    os.system('sudo systemctl daemon-reload')
+    print("已移除 Stock Monitor 的 Systemd 服务配置。")
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Stock Monitor Service')
+    parser.add_argument('--run', action='store_true', help='Run the stock monitor directly')
+    return parser.parse_args()
 
 def main():
-    monitor = StockMonitor(
-        telegram_bot_token=TELEGRAM_BOT_TOKEN,
-        telegram_chat_id=TELEGRAM_CHAT_ID
-    )
-    try:
+    args = parse_arguments()
+    
+    if args.run:
+        monitor = StockMonitor(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
         monitor.monitor(MONITOR_URLS)
-    except KeyboardInterrupt:
-        logging.info("程序被手动终止")
+    else:
+        # 交互模式
+        while True:
+            print("\n输入数字选择：")
+            print("1、临时运行 -测试效果")
+            print("2、后台运行 -配置并启动 Systemd 服务")
+            print("3、检查 Systemd 服务状态")
+            print("4、移除 Systemd 服务配置")
+            print("5、退出")
 
+            try:
+                choice = int(input("请选择操作（1-5）："))
+                if choice == 1:
+                    monitor = StockMonitor(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
+                    try:
+                        monitor.monitor(MONITOR_URLS)
+                    except KeyboardInterrupt:
+                        logging.info("程序被手动终止")
+                elif choice == 2:
+                    setup_systemd()
+                elif choice == 3:
+                    check_systemd_status()
+                elif choice == 4:
+                    remove_systemd_service()
+                elif choice == 5:
+                    print("程序退出。")
+                    break
+                else:
+                    print("无效的选择，请输入1-5之间的数字。")
+            except ValueError:
+                print("请输入有效的数字。")
 
 if __name__ == '__main__':
     main()
