@@ -219,10 +219,10 @@ def main():
         while True:
             print("\033[34m\n输入数字选择：\033[0m")
             print("1、临时运行 -测试效果")
-            print("2、后台运行 -配置并启动 Systemd 服务")
-            print("3、检查 Systemd 服务状态")
-            print("4、重启 Systemd 服务配置")
-            print("5、移除 Systemd 服务配置")
+            print("2、后台运行 -自动配置并启动 Systemd 服务")
+            print("3、检查 Systemd 状态")
+            print("4、重启 Systemd 服务")
+            print("5、移除 Systemd 配置")
             print("0、退出")
             
             try:
