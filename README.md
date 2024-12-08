@@ -13,7 +13,7 @@ python版本
 4. 运行命令: sudo python3 stock_monitor.py
 5. ~~建议使用 systemd 管理进程， [systemd 使用教程](https://www.upx8.com/4537)~~ （已集成）
 
-python版本
+shell版本
 1. 运行脚本bash stock_monitor.sh
 2. 功能和py脚本一样
 # 参数配置
