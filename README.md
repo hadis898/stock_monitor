@@ -6,11 +6,16 @@
 万能监测，对所有网站都有效，不管你监测什么内容，只要更改关键词 匹配正则表达式就行。
 
 # 部署说明
+python版本
 1. 安装依赖: pip install requests [如果pip安装报错，解决方法](https://www.upx8.com/4545)
 2. 在 MONITOR_URLS 中添加要监控的商品链接和名称
 3. 替换 TELEGRAM_BOT_TOKEN 和 TELEGRAM_CHAT_ID
 4. 运行命令: sudo python3 stock_monitor.py
 5. ~~建议使用 systemd 管理进程， [systemd 使用教程](https://www.upx8.com/4537)~~ （已集成）
+
+python版本
+1. 运行脚本bash stock_monitor.sh
+2. 功能和py脚本一样
 # 参数配置
 
 ```
@@ -20,6 +25,9 @@ PRICE_PATTERN = r'价格\s*(\d+\.\d+)'  # 匹配价格的正则表达式
 MAX_WORKERS = 5  # 并发线程数
 ```
 # 更新日志
+2024.12.08
+增加了一个shell版本
+
 2024.12.07
 1. 优化代码，改善用户体验
 2. 新增 数字选项
