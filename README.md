@@ -15,7 +15,7 @@ python版本
 
 shell版本
 1. 运行脚本bash stock_monitor.sh
-2. 功能和py脚本一样
+2. 功能和py脚本一样，就是不需要装py依赖，方便点。
 # 参数配置
 
 ```
