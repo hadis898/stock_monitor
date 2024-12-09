@@ -2,7 +2,8 @@
 
 # 库存监控脚本
 # 功能：监控指定网站的商品库存和价格变化，并通过Telegram发送通知
-# 版本：1.2
+# 版本：1.3
+# 依赖：curl, systemctl
 
 # Telegram机器人配置
 TELEGRAM_BOT_TOKEN='TELEGRAM_BOT_TOKEN'  # 替换为您的电报 Token
@@ -20,83 +21,61 @@ declare -A MONITOR_URLS=(
 )
 
 # 日志记录函数
-# 参数1：日志级别（INFO/WARNING/ERROR）
-# 参数2：日志消息内容
-# 功能：将日志同时输出到控制台和日志文件
 log() {
     local level="$1"
     local message="$2"
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $level: $message" | tee -a "$LOG_FILE"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "$timestamp - $level: $message" | tee -a "$LOG_FILE"
 }
 
 # Telegram消息发送函数
-# 参数1：要发送的消息内容
-# 功能：通过Telegram Bot API发送通知消息
 send_telegram_message() {
     local message="$1"
     local url="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"
     
     # 发送消息并记录结果
-    response=$(curl -s -X POST "$url" \
-        -d "chat_id=${TELEGRAM_CHAT_ID}" \
-        -d "text=${message}")
-    
-    # 检查发送结果并记录日志
+    local response=$(curl -s -X POST "$url" -d "chat_id=${TELEGRAM_CHAT_ID}" -d "text=${message}")
     if [[ $? -eq 0 ]]; then
         log "INFO" "Telegram通知发送成功"
     else
-        log "ERROR" "Telegram通知发送失败"
+        log "ERROR" "Telegram通知发送失败: $response"
     fi
 }
 
 # 获取商品库存和价格函数
-# 参数1：商品URL
-# 参数2：商品名称
-# 功能：抓取网页并提取库存和价格信息
 get_current_stock_and_price() {
     local url="$1"
     local product_name="$2"
     
-    # 使用curl获取网页内容，模拟浏览器User-Agent
     local page_content=$(curl -s -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" "$url")
     
-    # 使用grep和sed提取库存信息
     local stock=$(echo "$page_content" | grep -oP '库存\((\d+)\)' | sed -n 's/库存(\([0-9]\+\))/\1/p')
     
-    # 使用grep和sed提取价格信息
     local price=$(echo "$page_content" | grep -oP '¥\s*(\d+\.\d+)' | sed -n 's/¥\s*//p')
     
-    # 检查库存或价格是否提取成功
     if [[ -z "$stock" ]] || [[ -z "$price" ]]; then
         log "WARNING" "$product_name: 无法提取库存或价格信息"
         return 1
     fi
     
-    # 返回库存和价格，使用逗号分隔
     echo "$stock,$price"
 }
 
-# 库存变化监控主函数
 # 功能：持续监控所有配置的商品，检测库存和价格变化
 monitor_stock_changes() {
-    # 声明关联数组用于跟踪前一状态
     declare -A previous_stocks
     declare -A previous_prices
     
     log "INFO" "开始监控 ${#MONITOR_URLS[@]} 个商品"
     
-    # 无限循环持续监控
     while true; do
         # 遍历所有监控的URL
         for url in "${!MONITOR_URLS[@]}"; do
             product_name="${MONITOR_URLS[$url]}"
             
-            # 获取当前库存和价格
             result=$(get_current_stock_and_price "$url" "$product_name")
             
-            # 检查是否成功获取信息
             if [[ $? -eq 0 ]]; then
-                # 分割结果为库存和价格
                 IFS=',' read -r current_stock current_price <<< "$result"
                 
                 # 首次检查时记录初始状态
@@ -127,12 +106,10 @@ monitor_stock_changes() {
             fi
         done
         
-        # 等待下一次检查
         sleep "$CHECK_INTERVAL"
     done
 }
 
-# Systemd服务配置函数
 # 功能：为脚本创建并启用systemd服务，实现开机自启和后台运行
 setup_systemd_service() {
     local script_path=$(readlink -f "$0")
