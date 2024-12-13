@@ -28,7 +28,7 @@ check_and_install_dependencies()
 TELEGRAM_BOT_TOKEN = 'TELEGRAM_BOT_TOKEN'  # 替换为您的电报 Token
 TELEGRAM_CHAT_ID = 'TELEGRAM_CHAT_ID'  # 替换为您的电报聊天ID
 
-# 监控配置，可以多地址监控
+# 监控配置
 MONITOR_URLS = [
     {'url': 'https://cloud.upx8.com/buy/1', 'name': '云服务器（香港）'},
     {'url': 'https://cloud.upx8.com/buy/2', 'name': '云服务器（美国）'},
@@ -61,29 +61,39 @@ class StockMonitor:
             'Accept-Language': 'zh-CN,zh;q=0.9',
         })
 
-    def get_current_stock_and_price(self, url: str, product_name: str) -> Dict[str, Optional[int]]:
+    def get_current_stock_and_price(self, url: str, product_name: str) -> Optional[Dict[str, Optional[int]]]:
         """
-        获取当前商品库存数量和价格
+        获取当前商品库存数量和价格，仅在成功获取有效数据时返回
         """
         try:
             response = self.session.get(url, timeout=10)
             response.raise_for_status()
 
+            # 优化正则匹配逻辑
             stock_match = re.search(STOCK_PATTERN, response.text)
             price_match = re.search(PRICE_PATTERN, response.text)
 
-            stock = int(stock_match.group(1)) if stock_match else None
-            price = float(price_match.group(1)) if price_match else None
+            # 仅当同时找到库存和价格时才认为数据有效
+            if stock_match and price_match:
+                stock = int(stock_match.group(1))
+                price = float(price_match.group(1))
+                
+                logging.info(f"{product_name} 库存: {stock}, 价格: ¥{price}")
+                return {'stock': stock, 'price': price}
+            else:
+                # 如果无法完整匹配，记录警告但不返回数据
+                warnings = []
+                if not stock_match:
+                    warnings.append("未找到库存信息")
+                if not price_match:
+                    warnings.append("未找到价格信息")
+                
+                logging.warning(f"{product_name} {' 且 '.join(warnings)}")
+                return None
 
-            if not stock_match:
-                logging.warning(f"{product_name} 未找到库存信息")
-            if not price_match:
-                logging.warning(f"{product_name} 未找到价格信息")
-
-            return {'stock': stock, 'price': price}
-        except requests.RequestException as e:
+        except (requests.RequestException, ValueError) as e:
             logging.error(f"{product_name} 获取页面失败: {e}")
-            return {'stock': None, 'price': None}
+            return None
 
     def send_telegram_message(self, message: str):
         try:
@@ -100,7 +110,7 @@ class StockMonitor:
 
     def check_stock_changes(self, monitored_urls: List[Dict[str, str]]):
         """
-        并发检查多个URL的库存和价格变化
+        并发检查多个URL的库存和价格变化，只在成功获取数据时比较和通知
         """
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = [
@@ -110,7 +120,13 @@ class StockMonitor:
 
             for url_info, future in futures:
                 try:
+                    # 仅处理成功获取的有效数据
                     current_info = future.result()
+                    
+                    if current_info is None:
+                        # 如果无法获取有效数据，跳过处理
+                        continue
+
                     current_stock = current_info['stock']
                     current_price = current_info['price']
 
@@ -118,12 +134,14 @@ class StockMonitor:
                     previous_price = self.price_states.get(url_info['url'])
 
                     if previous_stock is None or previous_price is None:
+                        # 首次检测，记录初始状态
                         self.stock_states[url_info['url']] = current_stock
                         self.price_states[url_info['url']] = current_price
-                        logging.info(f"{url_info['name']} 价格: ¥{current_price}, 初始库存: {current_stock}")
+                        logging.info(f"{url_info['name']} 初始价格: ¥{current_price}, 初始库存: {current_stock}")
 
-                    elif current_stock != previous_stock or current_price != previous_price:
-                        change_info = f"商品库存变化提醒\n" \
+                    # 仅在数据有变化且都为有效值时发送通知
+                    elif (current_stock != previous_stock or current_price != previous_price):
+                        change_info = f"商品库存价格变化提醒\n" \
                                       f"商品: {url_info['name']}\n" \
                                       f"库存: {previous_stock} -> {current_stock}\n" \
                                       f"价格: ¥{previous_price} -> ¥{current_price}\n" \
@@ -131,17 +149,17 @@ class StockMonitor:
                         logging.info(change_info)
                         self.send_telegram_message(change_info)
 
+                        # 更新状态
                         self.stock_states[url_info['url']] = current_stock
                         self.price_states[url_info['url']] = current_price
 
                 except Exception as e:
                     error_info = f"{url_info['name']} 检查过程发生异常:\n{traceback.format_exc()}"
                     logging.error(error_info)
-                    self.send_telegram_message(error_info)
 
     def monitor(self, monitored_urls: List[Dict[str, str]]):
         """
-        持续监控商品库存和价格变化
+        持续监控商品库存和价格变化，增加异常处理
         """
         logging.info(f"开始监控 {len(monitored_urls)} 个商品的库存变化")
         while True:
@@ -151,7 +169,7 @@ class StockMonitor:
             except Exception as e:
                 error_info = f"监控过程发生异常:\n{traceback.format_exc()}"
                 logging.error(error_info)
-                self.send_telegram_message(error_info)
+                # 出现严重异常时仅记录日志，不发送Telegram通知
                 time.sleep(CHECK_INTERVAL)
 
 def setup_systemd():
@@ -245,7 +263,7 @@ def main():
                     print("\033[31m√成功退出程序\033[0m")
                     break
                 else:
-                    print("无效的选择，请输入1-6之间的数字。")
+                    print("无效的选择，请输入1-5之间的数字。")
             except ValueError:
                 print("请输入有效的数字。")
 
